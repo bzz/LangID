@@ -76,7 +76,9 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
 # collec data, get languages
 ./extract_files.sh
 
-q -d";" "SELECT c1,COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY cnt DESC"
+# stats: lang, number of lines, number of files
+q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY cnt DESC"
+q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY s DESC"
 
 # extract features
 ./prep.py

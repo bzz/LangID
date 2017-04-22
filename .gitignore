@@ -1,4 +1,11 @@
+#data
+
 repos/
 *~
+
+# collected examples
 files_all.csv
 status_all.txt
+
+#dictionary for language label
+lang_dict.*

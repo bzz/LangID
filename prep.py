@@ -9,7 +9,7 @@ def main():
     for line in f:
       # pre-process/extract features in VW format:
       # ext, filename, shebang #? 1grams, 2grams, 3grams
-      lang, path = line.split(";")
+      lang, path, linum = line.split(";")
       if lang not in langs:
           langs[lang] = id
           id += 1
