@@ -9,3 +9,6 @@ status_all.txt
 
 #dictionary for language label
 lang_dict.*
+
+*.vw
+*_model
