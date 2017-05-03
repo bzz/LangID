@@ -95,6 +95,14 @@ vw -d train_v.vw --oaa 19 --loss_function logistic -f vw_model
 # predict
 vw -d test_v.vw --loss_function logistic -i vw_model -t
 
+# AUC #1, using http://osmot.cs.cornell.edu/kddcup/software.html
+vw -d test.data -t -i model.vw -r /dev/stdout | perf -roc -files gold /dev/stdin
+
+# AUC #2, using https://github.com/zygmuntz/kaggle-amazon/blob/master/auc.py
+pip install ml_metrics
+wget https://raw.githubusercontent.com/zygmuntz/kaggle-amazon/master/auc.py
+python pip.py <> <>
+
 ```
 
 ## TODO

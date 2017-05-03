@@ -12,3 +12,7 @@ lang_dict.*
 
 *.vw
 *_model
+
+.venv
+
+auc.py
