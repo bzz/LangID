@@ -9,6 +9,16 @@ Goals:
 Non-goal: ignore vendored&generated code, override \w user settings
 
 
+  * [Spec/Requiremtns](#specrequiremtns)
+  * [Plan](#plan)
+  * [Depencencies](#depencencies)
+  * [Collect the data](#collect-the-data)
+  * [Train](#train)
+  * [Running](#running)
+     * [Vowpal Wabbit](#vowpal-wabbit)
+     * [fastText](#fasttext)
+
+
 ## Spec/Requiremtns
 
  IN: file name, content(sample?) of the file
@@ -23,13 +33,15 @@ Go bindings. Inference should be possible from Golang code
  1. [x] vowpal wabbit
  2. [x] fastText
  3. move to scikit-learn:
-   - binary classificartion + plot AUC
-   - decidion trees
- 4. move to TF
+   - binary classificartion
+   - decision trees
+ 4. Visualize precision/recall/AUC/performance
+ 5. move to TF
    - feed-forward NN
    - use predictions from Golang
    - RNN
- 6. move to PyTourch?
+ 6. Golang buindings (for predictions)
+ 7. move to PyTourch
 
 
 ## Depencencies
@@ -182,3 +194,4 @@ R@1	0.892
  - make `clone_and_annotate_each_file.sh` pull, if repo in `./repos` alreayd exists
  - parallelize data collection \w GNU parallel or [equivalent](https://github.com/mmstick/parallel)
  - plot AUC http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+ - corner-cases: `file:.gitattributes` labeled
