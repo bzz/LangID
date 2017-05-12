@@ -1,20 +1,21 @@
 #!/usr/bin/env python
-import os
+import os, sys
 import pickle
 from pprint import pprint
 
 def main():
   langs_dict = {}; id = 1
-  with open("./annotated_files.csv") as f: #TODO(bzz): check size feature, skip big files
+  list_of_files = sys.argv[1]
+  with open(list_of_files) as f: #TODO(bzz): check 'filesize' feature, skip big files
     for line in f:
-      # pre-process/extract features in VW format:
-      # ext, filename, shebang #? 1grams, 2grams, 3grams
       lang, path, linum = line.split(";")
+      # build dict
       if lang not in langs_dict:
           langs_dict[lang] = id
           id += 1
       lang_id = langs_dict[lang]
 
+      # pre-process/extract features in VW format
       base = os.path.basename(path)
       filename, ext = os.path.splitext(base)
       shebang = ""
