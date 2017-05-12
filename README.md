@@ -86,10 +86,10 @@ q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY 
 q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY s DESC"
 
 # extract features
-./prep.py
+./extract_features_vw.py
 
 # shuffle
-./prep.py | perl -MList::Util=shuffle -e 'print shuffle(<>);' > train.vw
+./extract_features_vw.py | perl -MList::Util=shuffle -e 'print shuffle(<>);' > train.vw
 
 # split train/validate
 python split.py train.vw train_v.vw test_v.vw -p 0.8 -r popa

@@ -25,7 +25,7 @@ def main():
   with open('lang_dict.txt', 'wt') as out:
     pprint(langs, stream=out)
 
-  
+
   
 
 if __name__ == '__main__':
