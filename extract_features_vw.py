@@ -20,6 +20,8 @@ def main():
       shebang = ""
       #with open(path.strip()) as src_f:
       #    shebang = src_f.readline()
+
+      #TODO(bzz): add Tag https://github.com/JohnLangford/vowpal_wabbit/wiki/Input-format#input-format
       print("{} | {} | {}".format(lang_id, ext.strip(), filename.strip())) #, shebang.strip()))
   pickle.dump(langs_dict, open("lang_dict.pickle", "wb"))
   with open('lang_dict.txt', 'wt') as out:

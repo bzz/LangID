@@ -99,6 +99,7 @@ vw -d train_split.vw --oaa 19 --loss_function logistic -f trained_vw.model
 
 # predict
 vw -d test_split.vw --loss_function logistic -i trained_vw.model -t
+vw -t -i trained_vw.model test_split.vw -p test_split.predict
 
 # AUC #1, using http://osmot.cs.cornell.edu/kddcup/software.html
 vw -d test.data -t -i trained_vw.model -r /dev/stdout | perf -roc -files gold /dev/stdin
@@ -106,7 +107,9 @@ vw -d test.data -t -i trained_vw.model -r /dev/stdout | perf -roc -files gold /d
 # AUC #2, using https://github.com/zygmuntz/kaggle-amazon/blob/master/auc.py
 pip install ml_metrics
 wget https://raw.githubusercontent.com/zygmuntz/kaggle-amazon/master/auc.py
-python auc.py <> trained_vw.model
+python auc.py test_split.vw test_split.predict
+
+ > AUC: 0.0614430665163
 
 ```
 

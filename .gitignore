@@ -14,4 +14,7 @@ lang_dict.*
 
 .venv
 
+*.predict
+*.model
+
 auc.py
