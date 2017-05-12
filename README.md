@@ -3,8 +3,8 @@
 *Language identification* is the task of determining the languege, by looking on sample of text.
 
 Goals:
- - build multiple models for identification of programming languages for a give file
- - compare performance/accuracy
+ - build multiple models for identification of programming languages for a given file
+ - compare accuracy and performance
 
 Non-goal: ignore vendored&generated code, override \w user settings
 
@@ -42,6 +42,13 @@ LDFLAGS="-L/usr/local/opt/icu4c/lib" CPPFLAGS="-I/usr/local/opt/icu4c/include" g
 brew install jq q vowpal-wabbit
 ```
 
+## Collect the data
+
+ - Clone list of projects
+ - for each: run linguist and annotate every file
+ - Separate train/test datasets
+
+
 Experiments
 
 ```
@@ -54,10 +61,8 @@ linguist --json | jq -r 'keys[] as $k | "\($k); \(.[$k][])"' | less
 linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | awk -F';' -v pwd=$PWD '{print $1 ";" pwd "" $2}' > files.csv
 ```
 
-## Train
 
- collect data: smaple files for each programming language (how many?)
- separate train/test
+## Train
 
  read and vectorize input:
    - filename
@@ -74,7 +79,7 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
 
 ```
 # collec data, get languages
-./extract_files.sh
+./clone_and_annotate_each_file.sh
 
 # stats: lang, number of lines, number of files
 q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY cnt DESC"
@@ -106,5 +111,5 @@ python pip.py <> <>
 ```
 
 ## TODO
- - make `extract_files.sh` pull if repo exists
+ - make `clone_and_annotate_each_file.sh` pull, if repo in `./repos` alreayd exists
  - parallelize data collection \w GNU parallel or [equivalent](https://github.com/mmstick/parallel)
