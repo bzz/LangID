@@ -4,8 +4,7 @@ repos/
 *~
 
 # collected examples
-files_all.csv
-status_all.txt
+annotated_files*
 
 #dictionary for language label
 lang_dict.*

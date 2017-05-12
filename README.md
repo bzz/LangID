@@ -82,31 +82,31 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
 ./clone_and_annotate_each_file.sh
 
 # stats: lang, number of lines, number of files
-q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY cnt DESC"
-q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./files_all.csv GROUP BY c1 ORDER BY s DESC"
+q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./annotated_files.csv GROUP BY c1 ORDER BY cnt DESC"
+q -d";" "SELECT c1, SUM(c3) as s, COUNT(1) as cnt FROM ./annotated_files.csv GROUP BY c1 ORDER BY s DESC"
 
 # extract features
 ./extract_features_vw.py
 
 # shuffle
-./extract_features_vw.py | perl -MList::Util=shuffle -e 'print shuffle(<>);' > train.vw
+./extract_features_vw.py | perl -MList::Util=shuffle -e 'print shuffle(<>);' > train_features.vw
 
 # split train/validate
-python split.py train.vw train_v.vw test_v.vw -p 0.8 -r popa
+python split.py train_features.vw train_split.vw test_split.vw -p 0.8 -r popa2
 
-# train
-vw -d train_v.vw --oaa 19 --loss_function logistic -f vw_model
+# train, for 19 languages
+vw -d train_split.vw --oaa 19 --loss_function logistic -f trained_vw.model
 
 # predict
-vw -d test_v.vw --loss_function logistic -i vw_model -t
+vw -d test_split.vw --loss_function logistic -i trained_vw.model -t
 
 # AUC #1, using http://osmot.cs.cornell.edu/kddcup/software.html
-vw -d test.data -t -i model.vw -r /dev/stdout | perf -roc -files gold /dev/stdin
+vw -d test.data -t -i trained_vw.model -r /dev/stdout | perf -roc -files gold /dev/stdin
 
 # AUC #2, using https://github.com/zygmuntz/kaggle-amazon/blob/master/auc.py
 pip install ml_metrics
 wget https://raw.githubusercontent.com/zygmuntz/kaggle-amazon/master/auc.py
-python pip.py <> <>
+python auc.py <> trained_vw.model
 
 ```
 
