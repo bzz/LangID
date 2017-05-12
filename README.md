@@ -162,7 +162,7 @@ head -n 3000 repos-files.txt > repos-files.train
 tail -n 1221 repos-files.txt > repos-files.valid
 
 # train
-fasttext supervised predict trained_fastText.model.bin -
+fasttext supervised -input repos-files.train -output trained_fastText.model
 
 # individual predictions
 fasttext predict trained_fastText.model.bin -
