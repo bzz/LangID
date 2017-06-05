@@ -2,3 +2,4 @@ https://github.com/src-d/go-git.git
 https://github.com/github/linguist.git
 https://github.com/django/django.git
 https://github.com/git/git.git
+https://github.com/facebookresearch/fastText

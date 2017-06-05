@@ -23,7 +23,7 @@ def main():
           file_content = src_f.read().replace('\n', ' ')
           #TODO(bzz): insert " " for [],.!>
 
-      print("__label__{} {}".format(lang_id, file_content))
+      print("__label__{} {}".format(lang, file_content))
   #pickle.dump(langs_dict, open("lang_dict.pickle", "wb"))
   with open('lang_dict.txt', 'wt') as out:
     pprint(langs_dict, stream=out)
