@@ -18,6 +18,7 @@ Non-goal: ignore vendored&generated code, override \w user settings
      * [Vowpal Wabbit](#vowpal-wabbit)
      * [fastText](#fasttext)
      * [scikit-learn](#scikit-learn)
+     * [Tensorflow](#tensorflow)
 
 
 ## Spec/Requiremtns
@@ -184,6 +185,9 @@ https://github.com/facebookresearch/fastText/blob/master/tutorials/supervised-le
 Features:
  - full text
 
+#### Supervised
+Based on github/liguist
+
 ```
 # format input from `annotated_files.csv` to `__label__N <token1> <token2> ...`
 ./extract_features_fastText.py annotated_files.csv | perl -MList::Util=shuffle -e 'print shuffle(<>);' > repos-files.txt
@@ -213,8 +217,8 @@ Number of words:  315588
 Number of labels: 16
 Progress: 100.0%  words/sec/thread: 2767002  lr: 0.000000  loss: 0.848436  eta: 0h0m
 
-# individual predictions
-fasttext predict trained_fastText.model.bin -
+# individual predictions, top5
+fasttext predict trained.model.bin.bin - 5
 
 # test + P@1, R@1 
 fasttext test trained_fastText.model.bin repos-files.valid
@@ -236,14 +240,49 @@ P@1	0.983
 R@1	0.983
 
 # 25 epoch + 1.0 lr
+~/floss/fastText/fasttext supervised -input repos-files.train -epoch 25 -lr 1.0 -output trained.model.bin
 N	1226
 P@1	0.991
 R@1	0.991
+
+# same + sub-word ngrams
+fasttext supervised -input repos-files.train -epoch 25 -lr 1.0 -maxn 6 -minn 3 -output trained.model.ngram
+fasttext test trained.model.ngram.bin repos-files.valid 10
+N	1221
+P@10	0.0999
+R@10	0.999
+Number of examples: 1221
+
+fasttext print-word-vectors trained.model.ngram.bin
+//not 0 0 0 0 for un-known words
 ```
+
+#### Un-supervised
+
+```
+fasttext skipgram -input repos-files-and.train -output embeddings-files-and
+```
+
+#### Weakly-supervised?
+
+
+#### Visualize results
+
+visualize embeddings for files in projector
+plot precision/train on Github .md data
 
 
 ### scikit-learn
 
+
+### Tensorflow
+Linear model replicating fastText results
+Kerras https://github.com/poliglot/fasttext
+
+
+https://blog.twitter.com/engineering/en_us/a/2015/evaluating-language-identification-performance.html
+https://github.com/saffsd/langid.py
+http://blog.mikemccandless.com/2011/10/accuracy-and-performance-of-googles.html
 
 
 ## TODO
