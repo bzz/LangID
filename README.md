@@ -96,11 +96,35 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
    - words/tokens
    - bytes/integers
 
+## Datasets
+
+ 1. semi-supervised by linguist\enry
+  133Mb, 15,138 files in 18 lang
+  ```
+  # list of ursl in ./dataset-1/repos.txt
+  ./dataset-1/clone_and_annotate_each_file.sh
+  ```
+
+ 2. RosettaCodeData
+  200Mb, 64,745 files in 651 lang
+  ```
+  cd ./dataset-1/
+  git clone https://github.com/bzz/RosettaCodeData; cd RosettaCodeData
+  # Install RosetaCode \wo tests https://gist.github.com/vifo/2718520
+  ./cpannti.sh "RosettaCode"
+  rosettacode sync .
+  ```
+
+ 3. fenced code blocks from README.md
+  904MB, 3,502,565 snippets in 287 "langs" (freq > 50)
+  ```
+  ```
+
 
 ## Running
 
 ```
-# collec data, get languages
+# collect data, get languages
 ./clone_and_annotate_each_file.sh
 
 # stats: lang, number of lines, number of files

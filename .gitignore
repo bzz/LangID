@@ -18,3 +18,8 @@ lang_dict.*
 *.model
 
 auc.py
+
+.DS_Store
+.ipynb_checkpoints
+
+dataset-2/RosettaCodeData
