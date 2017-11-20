@@ -12,7 +12,7 @@ lang_dict.*
 *.vw
 *_model
 
-.venv
+.venv*
 
 *.predict
 *.model
@@ -23,3 +23,6 @@ auc.py
 .ipynb_checkpoints
 
 dataset-2/RosettaCodeData
+
+*.bin
+*.vec

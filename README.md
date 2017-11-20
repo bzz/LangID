@@ -13,6 +13,7 @@ Non-goal: ignore vendored&generated code, override \w user settings
   * [Plan](#plan)
   * [Depencencies](#depencencies)
   * [Collect the data](#collect-the-data)
+  * [Datasets](#datasets)
   * [Train](#train)
   * [Running](#running)
      * [Vowpal Wabbit](#vowpal-wabbit)
@@ -108,7 +109,7 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
  2. RosettaCodeData
   200Mb, 64,745 files in 651 lang
   ```
-  cd ./dataset-1/
+  cd ./dataset-2/
   git clone https://github.com/bzz/RosettaCodeData; cd RosettaCodeData
   # Install RosetaCode \wo tests https://gist.github.com/vifo/2718520
   ./cpannti.sh "RosettaCode"
@@ -116,8 +117,11 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
   ```
 
  3. fenced code blocks from README.md
-  904MB, 3,502,565 snippets in 287 "langs" (freq > 50)
+  904MB, 3.5m snippets in 287 "langs" (freq > 50)
+  Extracted on [OSD-5](https://gist.github.com/bzz/d84147035b52b69eae5aaa9dd6741603#i-learning-linguist), improved on OSD-11
   ```
+  cd ./dataset-3/
+  gsutil -m cp "gs://srcd-production-dataproc/fenced_code_blocks_json_parsed_top_langs.gz" .
   ```
 
 
