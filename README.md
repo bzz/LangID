@@ -20,6 +20,7 @@ Non-goal: ignore vendored&generated code, override \w user settings
      * [fastText](#fasttext)
      * [scikit-learn](#scikit-learn)
      * [Tensorflow](#tensorflow)
+     * [Keras](#keras)
 
 
 ## Spec/Requiremtns
@@ -210,6 +211,9 @@ From https://arxiv.org/abs/1607.01759
 https://github.com/facebookresearch/fastText#text-classification
 https://github.com/facebookresearch/fastText/blob/master/tutorials/supervised-learning.md#getting-and-preparing-the-data
 
+TODO:
+ - try https://github.com/facebookresearch/Starspace
+
 Features:
  - full text
 
@@ -304,13 +308,16 @@ plot precision/train on Github .md data
 
 
 ### Tensorflow
-Linear model replicating fastText results
-Kerras https://github.com/poliglot/fasttext
+Shallow feed-forward model, replicating fastText/CLD3 results
 
+ - https://blog.twitter.com/engineering/en_us/a/2015/evaluating-language-identification-performance.html
+ - https://github.com/saffsd/langid.py
+ - http://blog.mikemccandless.com/2011/10/accuracy-and-performance-of-googles.html
+ - https://github.com/google/cld3 / [Natural Language Processing with Small Feed-Forward Networks](https://arxiv.org/abs/1708.00214)
 
-https://blog.twitter.com/engineering/en_us/a/2015/evaluating-language-identification-performance.html
-https://github.com/saffsd/langid.py
-http://blog.mikemccandless.com/2011/10/accuracy-and-performance-of-googles.html
+### Keras
+ - https://github.com/poliglot/fasttext
+ - https://github.com/fchollet/keras/blob/master/examples/imdb_fasttext.py
 
 
 ## TODO
