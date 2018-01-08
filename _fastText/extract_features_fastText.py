@@ -1,35 +1,32 @@
 #!/usr/bin/env python
 import os, sys
-import pickle
-from pprint import pprint
+import codecs
 
 def main():
   langs_dict = {}; id = 1
   list_of_files = sys.argv[1]
-  with open(list_of_files) as f: #TODO(bzz): check 'filesize' feature, skip big files
-    for line in f:
-      lang, path, linum = line.split(";")
-      # build dict
-      if lang not in langs_dict:
-          langs_dict[lang] = id
-          id += 1
-      lang_id = langs_dict[lang]
+  base = os.path.basename(list_of_files)
+  fname, ext = os.path.splitext(base)
 
-      # pre-process/extract features in VW format
+  with codecs.open(list_of_files) as f, codecs.open("{}-meta.tsv".format(fname), mode="w", encoding="utf-8") as meta:
+    print("lang\tfile", file=meta)
+    for line in f:
+      #TODO(bzz): check 'linesNum' feature, skip big files
+      lang, path, linesNum = line.split(";")
+      # pre-process/extract features in FastText format
       base = os.path.basename(path)
       filename, ext = os.path.splitext(base)
       file_content = ""
-      with open(path.strip()) as src_f:
-          file_content = src_f.read().replace('\n', ' ')
-          #TODO(bzz): insert " " for [],.!>
-
-      print("__label__{} {}".format(lang, file_content))
-  #pickle.dump(langs_dict, open("lang_dict.pickle", "wb"))
-  with open('lang_dict.txt', 'wt') as out:
-    pprint(langs_dict, stream=out)
-
-
-  
+      with codecs.open(path.strip(), encoding="utf-8") as src_f:
+        try:
+          file_content = src_f.read().replace('\n', "\\n")
+          #TODO(bzz): add other pre-processing
+          #  
+          #  insert " " for [],.!>
+          print("{}|__label__{} {}".format(path.replace("/xxx/repos/", ""),lang,  file_content))
+        except Exception as e:
+          print("Failed to process {}, {}".format(path, e))
+  pass
 
 if __name__ == '__main__':
   main()

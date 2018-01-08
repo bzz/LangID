@@ -101,7 +101,7 @@ linguist --json | jq --arg pwd "$PWD" -r 'keys[] as $k | "\($k);\(.[$k][])"' | a
 ## Datasets
 
  1. semi-supervised by linguist\enry
-  133Mb, 15,138 files in 18 lang
+  132Mb, 4200 files in 18 lang
   ```
   # list of ursl in ./dataset-1/repos.txt
   ./dataset-1/clone_and_annotate_each_file.sh
@@ -259,7 +259,6 @@ N	1217
 P@1	0.892
 R@1	0.892
 
-
 # 25 epoch
 
 N 1226
@@ -289,6 +288,13 @@ fasttext print-word-vectors trained.model.ngram.bin
 //not 0 0 0 0 for un-known words
 ```
 
+~/floss/fastText/fasttext supervised -bucket 200000 -minn 3 -maxn 4 -input repos-files.train -output result/repos-files-3-4-200000 -lr 1.0 -epoch 25
+
+~/floss/fastText/fasttext test result/repos-files-3-4-200000.bin repos-files.valid 5
+
+~/floss/fastText/fasttext predict-prob result/repos-files-3-4-200000.bin test_langid.txt
+
+
 #### Un-supervised
 
 ```
@@ -314,6 +320,7 @@ Shallow feed-forward model, replicating fastText/CLD3 results
  - https://github.com/saffsd/langid.py
  - http://blog.mikemccandless.com/2011/10/accuracy-and-performance-of-googles.html
  - https://github.com/google/cld3 / [Natural Language Processing with Small Feed-Forward Networks](https://arxiv.org/abs/1708.00214)
+
 
 ### Keras
  - https://github.com/poliglot/fasttext
