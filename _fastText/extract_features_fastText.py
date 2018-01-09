@@ -1,15 +1,22 @@
 #!/usr/bin/env python
 import os, sys
 import codecs
+import argparse
+from itertools import zip_longest
+
+parser = argparse.ArgumentParser()
+parser.add_argument("files")
+parser.add_argument("--chunks", type=int, default=0, help="number of lines")
+args = parser.parse_args()
+
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
 
 def main():
-  langs_dict = {}; id = 1
-  list_of_files = sys.argv[1]
-  base = os.path.basename(list_of_files)
-  fname, ext = os.path.splitext(base)
-
-  with codecs.open(list_of_files) as f, codecs.open("{}-meta.tsv".format(fname), mode="w", encoding="utf-8") as meta:
-    print("lang\tfile", file=meta)
+  with codecs.open(args.files) as f:
+    if args.chunks > 0:
+      print("Using {} lines per example".format(args.chunks), file=sys.stderr)
     for line in f:
       #TODO(bzz): check 'linesNum' feature, skip big files
       lang, path, linesNum = line.split(";")
@@ -19,11 +26,15 @@ def main():
       file_content = ""
       with codecs.open(path.strip(), encoding="utf-8") as src_f:
         try:
-          file_content = src_f.read().replace('\n', "\\n")
-          #TODO(bzz): add other pre-processing
-          #  
-          #  insert " " for [],.!>
-          print("{}|__label__{} {}".format(path.replace("/xxx/repos/", ""),lang,  file_content))
+          if args.chunks > 0:
+            for lines_chunk in grouper(src_f, args.chunks):
+              chunk = ''.join(str(i) for i in lines_chunk).replace('\n', "\\n")
+              print("{}|__label__{} {}".format(path.replace("/Users/alex/floss/learning-linguist/repos/", ""), lang, chunk))
+          else:
+            file_content = src_f.read().replace('\n', "\\n")
+            #TODO(bzz): add other pre-processing
+            #  insert " " for [],.!>
+            print("{}|__label__{} {}".format(path.replace("/Users/alex/floss/learning-linguist/repos/", ""), lang, file_content))
         except Exception as e:
           print("Failed to process {}, {}".format(path, e))
   pass
