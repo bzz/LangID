@@ -306,8 +306,33 @@ fasttext skipgram -input repos-files-and.train -output embeddings-files-and
 
 #### Visualize results
 
-visualize embeddings for files in projector
-plot precision/train on Github .md data
+1. visualize embeddings for files in projector
+From _fastText
+```
+export filename="4k-files"
+./extract_features_fastText.py ../dataset-1/annotated_files.csv | perl -MList::Util=shuffle -e 'print shuffle(<>);' > ${filename}.txt
+
+#or using 10 lines chunks
+./extract_features_fastText.py --chunks 10 ../dataset-1/annotated_files.csv | perl -MList::Util=shuffle -e 'print shuffle(<>);' > ${filename}.txt
+
+python ../split.py ${filename}.txt ${filename}-path.train ${filename}-path.valid -p 0.7 -r dupa
+
+# strip path before training
+cat ${filename}-path.train | cut -d "|" -f 2- > ${filename}.train
+cat ${filename}-path.valid | cut -d "|" -f 2- > ${filename}.valid
+
+~/floss/fastText/fasttext supervised -minn 3 -maxn 4 -bucket 200000 -dim 50 -input ${filename}.train -output result/${filename}-3-4-200000-50 -lr 1.0 -epoch 25
+
+~/floss/fastText/fasttext test result/${filename}-3-4-200000-50.bin ${filename}.valid 1
+
+./prepare_visualization.py ${filename}-path.valid
+
+~/floss/fastText/fasttext print-sentence-vectors result/${filename}-3-4-200000-50.bin < ${filename}-no-chunks-path-nolabel.txt | tr " " "\t" > ${filename}-no-chunks-docs.tsv
+
+~/floss/fastText/fasttext quantize -input result/${filename}-3-4-200000-50.bin -output result/${filename}-3-4-200000-50 -qnorm -retrain -cutoff 100000
+```
+
+2. plot precision/train on Github .md data
 
 
 ### scikit-learn
