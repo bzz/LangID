@@ -1,9 +1,12 @@
+#!/usr/bin/env python
+
 import tensorflow as tf
 import pandas as pd
 import numpy as np
 from tensorboard import summary as summary_lib
 
 import collections
+import argparse
 import tempfile
 import codecs
 import pickle
@@ -13,7 +16,9 @@ import os
 from itertools import zip_longest
 #from nltk.util import ngrams
 
-""" 
+from vectorize import read_dict
+
+"""
 ### Training
 
 - [x] ['lang','file', 'LoC'] -> dictionary, dictionary_label
@@ -26,7 +31,7 @@ column = tf.feature_column.categorical_column_with_identity('snippet_vec', vocab
 
 classifier = tf.estimator.LinearClassifier(  
     feature_columns=[column], 
-    model_dir=os.path.join(model_dir, 'bow_sparse'))
+    model_dir=os.path.join(output_dir, 'bow_sparse'))
 
 train_input_fn = tf.estimator.inputs.pandas_input_fn(x=snippets_train, labels_train)
 classifier.train(nput_fn=train_input_fn)
@@ -40,19 +45,29 @@ classifier.evaluate()
 print_predictions(sentences, classifier):
 """
 
-DATASET_ROOT = '/Users/alex/floss/learning-linguist/repos/'
+DATASET_ROOT = '/Users/alex/floss/learning-linguist/dataset-1/repos/'
 pd.set_option('line_width', 120)
 pd.set_option('max_colwidth', 60)
 
 vocabulary_size = 100000
-model_dir = tempfile.mkdtemp()
-SNIPPET_DATASET_FILE = 'snippets.tfrecords'
+SNIPPET_DATASET_TRAIN_FILE = 'snippets_train.tfrecords'
+SNIPPET_DATASET_TEST_FILE = 'snippets_test.tfrecords'
 SNIPPET_DICT_FILE = 'snippets_dict'
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--dict", type=str, help="file to read a dictionary from", required=True)
+    parser.add_argument("-l", "--labels-dict", type=str, help="load labels dictionary from", required=True)
+    parser.add_argument("-o", "--output-dir", type=str, help="save final model to")
+    args = parser.parse_args()
+
+    if not args.output_dir:
+        args.output_dir = tempfile.mkdtemp()
+        print("Model will be saved to {}".format(args.output_dir))
+
     #read data
-    DATASET_FILE = '../dataset-1/annotated_files.csv'
+    DATASET_FILE = '../dataset-1/annotated_files_enry.csv'
     dataset = pd.read_csv(DATASET_FILE, sep=';', names=['lang', 'file', 'LoC'])
     print("## Files")
     print(dataset.head().to_string(formatters={'file': lambda x: "{}".format(x.replace(DATASET_ROOT, ''))}))
@@ -61,31 +76,40 @@ def main():
     print(dataset.groupby(['lang'])['file'].count().sort_values(ascending=False))
     print("\n### LoC / Lang")
     print(dataset.groupby(['lang'])['LoC'].sum().sort_values(ascending=False))
+    print("")
+    # print("\n## Files => Snippets")
+    # snippets = filesToSnippets(dataset)
+    # print("\n## Split snippets for train/validation")
+    # train_sn, test_sn = split(snippets, 20)
 
     #dict
-    print("\n## Build dictionary")
-    word_to_index, uniq_words, label_to_index = build_dicts(dataset['file'], dataset['lang'])
-    print("Text: {} uniq words, dictionary size: {} \n".format(uniq_words, len(word_to_index)))
-    print("Lables: {} uniq\n".format(len(label_to_index)))
+    # print("\n## Build dictionary")
+    # word_to_index, uniq_words, label_to_index = build_dicts(dataset['file'], dataset['lang'])
+    # print("Text: {} uniq words, dictionary size: {} \n".format(uniq_words, len(word_to_index)))
+    # print("Lables: {} uniq\n".format(len(label_to_index)))
 
     #featurize: sparse BoW
-    print("\n## Vectorize words and labels")
-    if not os.path.exists(SNIPPET_DATASET_FILE):
-        print("File {} does not exist, generating it by reading {}".format(SNIPPET_DATASET_FILE, DATASET_FILE))
-        saveAsTFRecord(snippetsToVec(filesToSnippets(dataset), word_to_index, label_to_index))
-    else:
-        print("{} exists, reading it".format(SNIPPET_DATASET_FILE))
+    # print("\n## Vectorize words and labels")
+    # if not os.path.exists(SNIPPET_DATASET_TRAIN_FILE):
+    #     print("File {} does not exist, generating it by reading {}".format(SNIPPET_DATASET_TRAIN_FILE, DATASET_FILE))
+    #     train_data, test_data = saveAsTFRecord(snippetsToVec(train_sn, word_to_index, label_to_index))
+    # else:
+    #     train_data, test_data = SNIPPET_DATASET_TRAIN_FILE, SNIPPET_DATASET_TEST_FILE
+    #     print("{} exists, reading training data".format(train_data))
 
     # TODO add ngram features
     # TODO train/test data split
 
     #build model
+    train_data, test_data = "snippets_enry_train.tfrecords", "snippets_enry_test.tfrecords"
+    word_to_index = read_dict(args.dict)
+    label_to_index = read_dict(args.labels_dict, 0)
+
     print("\n## Training")
-    print("Model will be saved at: {}".format(model_dir))
     column = tf.feature_column.categorical_column_with_identity('snippet_vec', len(word_to_index))
 
     classifier = tf.estimator.LinearClassifier(
-        feature_columns=[column], model_dir=os.path.join(model_dir, 'bow_sparse'), n_classes=len(label_to_index))
+        feature_columns=[column], model_dir=os.path.join(args.output_dir, 'bow_sparse'), n_classes=len(label_to_index))
 
     # TODO DNN model
     #embedded_text_feature_column = text_embedding_column()
@@ -97,19 +121,19 @@ def main():
 
     # Training for 4000 steps means 128*4000 training examples (with the default batch size)
     # This is roughly equivalent to 5 epochs since the training dataset contains 92088 expls
-    classifier.train(input_fn=train_input_fn, steps=4000)
+    classifier.train(input_fn=lambda: input_fn(train_data), steps=4000)
 
     ## Evaluation
     print("\n## Evaluating")  # TODO: input_fn for evaluation (on train/test datasets)
-    train_eval_result = classifier.evaluate(input_fn=train_input_fn)
+    train_eval_result = classifier.evaluate(input_fn=lambda: input_fn(train_data))
     print("Training set accuracy: {accuracy}".format(**train_eval_result))
 
-    #test_eval_result = classifier.evaluate(input_fn=test_input_fn)
-    #print "Test set accuracy: {accuracy}".format(**test_eval_result)
+    test_eval_result = classifier.evaluate(input_fn=lambda: input_fn(test_data))
+    print("Test set accuracy: {accuracy}".format(**test_eval_result))
 
-    def load():
+    def load(filename):
         xs, ys = np.array([]), []
-        dataset = tf.data.TFRecordDataset(SNIPPET_DATASET_FILE)
+        dataset = tf.data.TFRecordDataset(filename)
         dataset = dataset.map(parseTFRecord)
         dataset = dataset.map(lambda x, y: (x["snippet_vec"], tf.expand_dims(tf.convert_to_tensor(y), 0)))
         dataset = dataset.padded_batch(92212, padded_shapes=([None], [1]))
@@ -120,20 +144,21 @@ def main():
         return whole_dataset_arrays
 
     print("\n## Preparing data to generate PR-curves")
-    x_test, y_test = load()
+    x_test, y_test = load(test_data)
 
     print("\n## Predicting")
     pred = np.stack([
         p['probabilities'] for p in classifier.predict(
             input_fn=tf.estimator.inputs.numpy_input_fn(x={"snippet_vec": x_test}, batch_size=64, shuffle=False))
     ])
-
+    
     # Add a PR summary for each class, in addition to the summaries that the classifier write
+    index_to_label = reverse(label_to_index)
     print("\n## Building PR-curves")
-    tf.reset_default_graph()
+    tf.reset_default_graph() # import pdb; pdb.set_trace()
     with tf.Session() as pr_sess:
         for cat in label_to_index.values():
-            with tf.name_scope('label_%s' % cat):
+            with tf.name_scope("label_%s".format(index_to_label[cat].replace(" ", "_").lower())):
             #    _, update_op = summary_lib.pr_curve_streaming_op(
                 update_op = summary_lib.pr_curve(
                     'precision_recall',
@@ -180,8 +205,8 @@ def deflate(x, y):
     return x, y
 
 
-def train_input_fn():
-    dataset = tf.data.TFRecordDataset(SNIPPET_DATASET_FILE)
+def input_fn(filename):
+    dataset = tf.data.TFRecordDataset(filename)
     dataset = dataset.shuffle(buffer_size=90000)
     dataset = dataset.map(parseTFRecord)
     dataset = dataset.map(expand)
@@ -192,12 +217,15 @@ def train_input_fn():
     #dataset.repeat()
     return dataset.make_one_shot_iterator().get_next()
 
+def reverse(dictionary):
+    return { v: k for k, v in dictionary.items() }
 
 def saveAsTFRecord(snipptes_vec):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".tfrecords") as fp:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".tfrecords") as fp, tempfile.NamedTemporaryFile(delete=False, suffix=".tfrecords") as fp_test:
         print("Convert dataset to TFRecordFormat: {}".format(fp.name))
         writer = tf.python_io.TFRecordWriter(fp.name)
-        i = 0
+        test_writer = tf.python_io.TFRecordWriter(fp_test.name)
+        i, i_test = 0, 0
         for snippet_vec, label_vec in snipptes_vec:
             i += 1
             ex = tf.train.SequenceExample()
@@ -206,11 +234,22 @@ def saveAsTFRecord(snipptes_vec):
             tokens = ex.feature_lists.feature_list["tokens"]
             for s in snippet_vec:
                 tokens.feature.add().int64_list.value.append(s)
-            writer.write(ex.SerializeToString())
+            if i % 5 == 0:
+                i_test+=1
+                test_writer.write(ex.SerializeToString())
+            else:
+                writer.write(ex.SerializeToString())
         writer.close()
-        shutil.copy(fp.name, SNIPPET_DATASET_FILE)
+        test_writer.close()
+
+        shutil.copy(fp.name, SNIPPET_DATASET_TRAIN_FILE)
         os.remove(fp.name)
-        print("{} snippets total".format(i))
+
+        shutil.copy(fp_test.name, SNIPPET_DATASET_TEST_FILE)
+        os.remove(fp_test.name)
+
+        print("{} snippets total, 80/20 split: {} train, {} test".format(i, i-i_test, i_test))
+        return SNIPPET_DATASET_TRAIN_FILE,  SNIPPET_DATASET_TEST_FILE
 
 
 def snippetsToVec(snippets, word_to_index, label_to_index):
