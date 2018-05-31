@@ -26,3 +26,6 @@ dataset-2/RosettaCodeData
 
 *.bin
 *.vec
+
+
+__pycache__

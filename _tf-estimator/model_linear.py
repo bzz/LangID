@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
-import os
+import os, sys
 import argparse
+import signal
 
 import tensorflow as tf
+import numpy as np
 
-from vectorize import read_dict
+from vectorize import read_dict, snippetToVec
 
 """
 Given dictionaris in
@@ -40,7 +42,7 @@ def main():
     elif args.mode == "test":
         test(args, classifier)
     elif args.mode == "predict":
-        predict(args)
+        predict(args, classifier, word_to_index, label_to_index)
 
 def train(args, classifier):
     if not args.model_dir:
@@ -110,9 +112,31 @@ def test(args, classifier):
     # - PR-curves
     # - learning curves (multiple accuracies on single TF board chart)
 
-def predict(args):
-    pass
+def predict(args, classifier, word_to_index, label_to_index):
+    input = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
+    labels = { v: k for k, v in label_to_index.items() }
+    for line in sys.stdin: # assume \n -> \\n in the CLI input
+        if SHOULD_STOP: # handle Ctrl+C
+            break
+        line = line.replace("\n", "")
+        if line:
+            x = np.array([np.array(snippetToVec(line, word_to_index))])
+            print("\t'{}' -> {}".format(line, x))
+            predict_input_fn = tf.estimator.inputs.numpy_input_fn(x={"snippet_vec": x}, shuffle=False)
+            predictions = [p['probabilities'] for p  in classifier.predict(input_fn=predict_input_fn)]
+            for prediction in predictions:
+                top_n_probs = np.argpartition(prediction, -3)[-3:]
+                for i in top_n_probs[np.argsort(prediction[top_n_probs])[::-1]]:
+                    print("\t {}, {:.2f}".format(labels[i], float(prediction[i])))
+                
+    input.close()
 
+SHOULD_STOP = False # Handle Ctrl+C gracefully
+def sigint_handler(signal, frame):
+    global SHOULD_STOP
+    SHOULD_STOP=True
+signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 if __name__ == "__main__":
     main()

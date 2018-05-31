@@ -49,9 +49,9 @@ Slav Petrov ... 2017, Google
 
 ## tokenization?
 text feature -> vector (both, train and inference)
- BoW
- BoNgrams
- BoW+BoNgrams
+ - BoW
+ - BoNgrams
+ - BoW+BoNgrams
 
 OneHot, but as list [w1, w1_ngram1, w1_ngram2, ..., w1_ngramN, w2, ...]
 
@@ -61,9 +61,8 @@ Important for re-use between training/inference.
 https://github.com/tensorflow/hub/blob/master/examples/text_embeddings/export.py#L101
 
 
-## Examples
+## Pre-processing pipeline
 
-Training/Evaluation in TF
 ```
 ./filter.py -o annotated_files_enry_filtered.csv --freq 100 ../dataset-1/annotated_files_enry.csv
 
@@ -77,26 +76,34 @@ pv snippets_enry_train.csv | ./vectorize.py -l labels.txt -d dict.txt | ./csv_to
 pv snippets_enry_test.csv  | ./vectorize.py -l labels.txt -d dict.txt | ./csv_to_tfrecords.py -o snippets_enry_test.tfrecords
 
 rm ../dataset-1/annotated_files_enry_filtered.csv snippets_enry_train.csv snippets_enry_test.csv dict.txt snippets_enry_train.tfrecords snippets_enry_test.tfrecords
+```
 
+
+## Training/Evaluation in TF
+
+```
 train.py -d dict.txt -l labels.txt -o model.??? snippets_train.tfrecords
 eval.py  -d dict.txt -m model.??? -o ./metrics_test snippets_test.tfrecords
 tensorboard --logdir=./metrics_test
 
 predict.py -d dict.txt -m model.???
 ```
-#TODO
+## Error analysis
+
+### Known issues
  - *.tfrecords sizes are x2 bigger :/
  - label_to_index is needed for evaluation
-
-
-
  - un-balanced split, some classes have not examples
  - "Gettext Catalog" is ok but the most frequent
  - "Modelica" for Django *.m   is wrong
  - "Roff"     for git/LGPL-2.1 is wrong
 
+### Approach
+  - PR-curves
+  - Learning curves, to diagnosing bias and variance
+  - Confusion matrix
 
-Inference in 
+## Inference
  - Golang https://github.com/src-d/tensorflow-codelab
  - JavaScript https://github.com/tensorflow/tfjs-converter
 
