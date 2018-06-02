@@ -8,7 +8,6 @@ import tensorflow as tf
 import numpy as np
 
 from vectorize import read_dict, snippetToVec
-
 """
 Given dictionaris in
  - dict.txt
@@ -18,6 +17,7 @@ Given dictionaris in
 ./model_linear.py -m ./model test snippets_enry_test.tfrecords
 ./model_linear.py predict < "println("hello world");"
 """
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -43,27 +43,6 @@ def main():
         test(args, classifier)
     elif args.mode == "predict":
         predict(args, classifier, word_to_index, label_to_index)
-
-def train(args, classifier):
-    if not args.model_dir:
-        args.model_dir = tempfile.mkdtemp()
-        print("Model will be saved to {}".format(args.model_dir))
-    else:
-        if not os.path.exists(args.model_dir):
-            print("Path '{}' does not exist, will create it".format(args.model_dir))
-            os.makedirs(args.model_dir)
-
-    train_data = args.input_file
-
-    print("\n## Training")
-    # Training for 4000 steps means 128*4000 training examples (with the default batch size)
-    # This is roughly equivalent to 5 epochs since the training dataset contains 92088 expls
-    classifier.train(input_fn=lambda: input_fn(train_data), steps=4000)
-
-    ## Evaluation
-    train_eval_result = classifier.evaluate(input_fn=lambda: input_fn(train_data))
-    print("Training set accuracy: {accuracy}".format(**train_eval_result))
-
 
 def input_fn(filename):
     def parseTFRecord(ex):
@@ -91,50 +70,85 @@ def input_fn(filename):
         x['len'] = tf.squeeze(x['len'])
         y = tf.squeeze(y)
         return x, y
-
+        
     dataset = tf.data.TFRecordDataset(filename)
-    dataset = dataset.shuffle(buffer_size=154000)
     dataset = dataset.map(parseTFRecord)
     dataset = dataset.map(expand)
     dataset = dataset.padded_batch(128, padded_shapes=({"snippet_vec": [None], "len": [1]}, [1]))
     dataset = dataset.map(deflate)
-    dataset.repeat()
-    return dataset.make_one_shot_iterator().get_next()
+    return dataset
+
+def train(args, classifier):
+    if not args.model_dir:
+        args.model_dir = tempfile.mkdtemp()
+        print("Model will be saved to {}".format(args.model_dir))
+    else:
+        if not os.path.exists(args.model_dir):
+            print("Path '{}' does not exist, will create it".format(args.model_dir))
+            os.makedirs(args.model_dir)
+
+    train_data = args.input_file
+
+    def train_input_fn(filename):
+        dataset = input_fn(filename)
+        dataset = dataset.shuffle(buffer_size=154000)
+        dataset.repeat()
+        return dataset.make_one_shot_iterator().get_next()
+
+    print("\n## Training")
+    # Training for 4000 steps means 128*4000 training examples (with the default batch size)
+    # This is roughly equivalent to 5 epochs since the training dataset contains 92088 expls
+    classifier.train(input_fn=lambda: train_input_fn(train_data), steps=4000)
+
+    ## Evaluation
+    train_eval_result = classifier.evaluate(input_fn=lambda: input_fn(train_data))
+    print("Training set accuracy: {accuracy}".format(**train_eval_result))
 
 
 def test(args, classifier):
     test_data = args.input_file
+
+    def eval_input_fn(filename):
+        dataset = input_fn(filename)
+        return dataset.make_one_shot_iterator().get_next()
+
     print("\n## Evaluating")
-    test_eval_result = classifier.evaluate(input_fn=lambda: input_fn(test_data))
+    test_eval_result = classifier.evaluate(input_fn=lambda: eval_input_fn(test_data))
     print("Test set accuracy: {accuracy}".format(**test_eval_result))
 
-    #TODO: 
+    #TODO:
     # - PR-curves
     # - learning curves (multiple accuracies on single TF board chart)
 
+
 def predict(args, classifier, word_to_index, label_to_index):
     input = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
-    labels = { v: k for k, v in label_to_index.items() }
-    for line in sys.stdin: # assume \n -> \\n in the CLI input
-        if SHOULD_STOP: # handle Ctrl+C
+    labels = {v: k for k, v in label_to_index.items()}
+    for line in sys.stdin:  # assume \n -> \\n in the CLI input
+        if SHOULD_STOP:  # handle Ctrl+C
             break
         line = line.replace("\n", "")
         if line:
             x = np.array([np.array(snippetToVec(line, word_to_index))])
             print("\t'{}' -> {}".format(line, x))
             predict_input_fn = tf.estimator.inputs.numpy_input_fn(x={"snippet_vec": x}, shuffle=False)
-            predictions = [p['probabilities'] for p  in classifier.predict(input_fn=predict_input_fn)]
+            predictions = [p['probabilities'] for p in classifier.predict(input_fn=predict_input_fn)]
             for prediction in predictions:
                 top_n_probs = np.argpartition(prediction, -3)[-3:]
                 for i in top_n_probs[np.argsort(prediction[top_n_probs])[::-1]]:
                     print("\t {}, {:.2f}".format(labels[i], float(prediction[i])))
-                
+
     input.close()
 
-SHOULD_STOP = False # Handle Ctrl+C gracefully
+
+SHOULD_STOP = False  # Handle Ctrl+C gracefully
+
+
 def sigint_handler(signal, frame):
     global SHOULD_STOP
-    SHOULD_STOP=True
+    SHOULD_STOP = True
+
+
 signal.signal(signal.SIGINT, sigint_handler)
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
