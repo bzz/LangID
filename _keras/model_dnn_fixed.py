@@ -20,7 +20,7 @@ from keras.preprocessing import sequence
 from keras.callbacks import TensorBoard
 
 
-from vectorize import read_dict
+from vectorize import read_dict, snippetToVec
 """
 Given dictionaris in
  - dict.txt
@@ -64,7 +64,7 @@ def main():
     elif args.mode == "test":
         test(model_dir, len(label_to_index))
     elif args.mode == "predict":
-        predict(model_dir, word_to_index, label_to_index)
+        predict(model_dir, word_to_index, label_to_index, args)
 
 def train(model_dir, word_to_index, label_to_index):
     ((x_train, y_train), (x_test, y_test)) = load_data_all(
@@ -140,9 +140,9 @@ def test(model_dir, num_classes):
     print('Test accuracy:', score[1])
 
 
-def predict(model_dir, word_to_index, label_to_index):
+def predict(model_dir, word_to_index, label_to_index, args):
     model_file = get_model_filename(model_dir)
-    model = keras.models.load_model(model_dir)
+    model = keras.models.load_model(model_file)
 
     input = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
     labels = {v: k for k, v in label_to_index.items()}
@@ -153,12 +153,13 @@ def predict(model_dir, word_to_index, label_to_index):
         if line:
             x = np.array([np.array(snippetToVec(line, word_to_index))])
             print("\t'{}' -> {}".format(line, x))
+            x = sequence.pad_sequences(x, maxlen=maxlen)
             predictions =  model.predict(x, batch_size=1)
             for prediction in predictions:
-                print("\t{}".format(prediction))
-                #top_n_probs = np.argpartition(prediction, -3)[-3:]
-                #for i in top_n_probs[np.argsort(prediction[top_n_probs])[::-1]]:
-                #    print("\t {}, {:.2f}".format(labels[i], float(prediction[i])))
+                #print("\t{}".format(prediction))
+                top_n_probs = np.argpartition(prediction, -3)[-3:]
+                for i in top_n_probs[np.argsort(prediction[top_n_probs])[::-1]]:
+                    print("\t {}, {:.2f}".format(labels[i], float(prediction[i])))
 
     input.close()
 
