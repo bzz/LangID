@@ -24,6 +24,12 @@ pv snippets_enry_test.csv | ./vectorize.py -l labels.txt -d dict.txt > snippets_
 # Print full snippet vectors/embeddings (analog of "fasttext print-sentence-vectors)
 ./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt -m model-full print-snippet-vectors -
 
+./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt \
+   -m model-full \
+   --meta snippets_enry_test_meta.csv \
+   --doc snippets_enry_test_doc.csv \
+   visualize-snippet-vectors \
+   ../_tf-estimator/snippets_enry_test.csv
 ```
 
 science-3 flow:

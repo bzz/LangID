@@ -46,34 +46,35 @@ def load_data(filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict", "print-sentence-vectors"))
+    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict", "print-sentence-vectors", "visualize-snippet-vectors"))
     parser.add_argument("input_file", help="Training data in CSV format")
     parser.add_argument("-d", "--dict", type=str, default="dict.txt", help="file to read a dictionary from")
     parser.add_argument("-l", "--labels-dict", type=str, default="labels.txt", help="load labels dictionary from")
     parser.add_argument("-m", "--model-dir", type=str, default="./model", help="save final model to")
+    parser.add_argument("--meta", help="Visualization: path to the output file \w metadata")
+    parser.add_argument("--doc", help="Visualization: path to the output file \w snippet vectors/embeddings")
 
     args = parser.parse_args()
 
     word_to_index = read_dict(args.dict)
-    label_to_index = read_dict(args.labels_dict, 0)
-
     model_dir = os.path.join(args.model_dir, 'bow_embeddings_keras')
 
     if args.mode == "train":
-        train(model_dir, word_to_index, label_to_index)
+        label_to_index = read_dict(args.labels_dict, 0)
+        train(model_dir, len(word_to_index), len(label_to_index))
     elif args.mode == "test":
+        label_to_index = read_dict(args.labels_dict, 0)
         test(model_dir, len(label_to_index))
     elif args.mode == "predict":
         predict(model_dir, word_to_index, label_to_index, args)
     elif args.mode == "print-snippet-vectors":
         print_snippet_vectors(model_dir, word_to_index, args)
+    elif args.mode == "visualize-snippet-vectors":
+        visualize_snippet_vectors(model_dir, word_to_index, args)
 
-def train(model_dir, word_to_index, label_to_index):
+def train(model_dir, max_words, num_classes):
     ((x_train, y_train), (x_test, y_test)) = load_data_all(
         TRAIN_FILE, TEST_FILE)
-
-    max_words = len(word_to_index)
-    num_classes = len(label_to_index)
     print('{} classes'.format(num_classes))
 
     print('Pad sequences (samples x maxlen)')
@@ -123,7 +124,7 @@ def train(model_dir, word_to_index, label_to_index):
 
 def test(model_dir, num_classes):
     print('Loading test data...')
-    (x_test, y_test) = load_data_for("test", TEST_FILE)
+    (x_test, y_test) = _load_data_for("test", TEST_FILE)
 
     print('Pad sequences (samples x maxlen)')
     x_test = sequence.pad_sequences(x_test, maxlen=maxlen)
@@ -133,7 +134,7 @@ def test(model_dir, num_classes):
     y_test = keras.utils.to_categorical(y_test, num_classes)
     print('y_test shape:', y_test.shape)
 
-    model_file = get_model_filename(model_dir)
+    model_file = _get_model_filename(model_dir)
     model = keras.models.load_model(model_file)
     score = model.evaluate(x_test, y_test,
                         batch_size=batch_size, verbose=1)
@@ -143,10 +144,10 @@ def test(model_dir, num_classes):
 
 
 def predict(model_dir, word_to_index, label_to_index, args):
-    model_file = get_model_filename(model_dir)
+    model_file = _get_model_filename(model_dir)
     model = keras.models.load_model(model_file)
 
-    input_ = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
+    input_ = sys.stdin if args.input_file == "-" else open(args.input_file, "r")
     labels = {v: k for k, v in label_to_index.items()}
     for line in input_:  # assume \n -> \\n in the CLI input
         if SHOULD_STOP:  # handle Ctrl+C
@@ -166,14 +167,8 @@ def predict(model_dir, word_to_index, label_to_index, args):
     input_.close()
 
 def print_snippet_vectors(model_dir, word_to_index, args):
-    model_file = get_model_filename(model_dir)
-    model = keras.models.load_model(model_file)
-
-    layer_name = 'global_average_pooling1d_1'
-    avg_layer_model = Model(inputs=model.input,
-                                    outputs=model.get_layer(layer_name).output)
-
-    input_ = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
+    avg_layer_model = _get_avg_layer(model_dir)
+    input_ = sys.stdin if args.input_file == "-" else open(args.input_file, "r")
     for line in input_:  # assume \n -> \\n in the CLI input
         if SHOULD_STOP:  # handle Ctrl+C
             break
@@ -188,7 +183,39 @@ def print_snippet_vectors(model_dir, word_to_index, args):
     input_.close()
 
 
-def get_model_filename(model_dir):
+def visualize_snippet_vectors(model_dir, word_to_index, args):
+    skipped_empty_snippets = 0
+    avg_layer_model = _get_avg_layer(model_dir)
+    with open(args.doc, 'w') as doc, open(args.meta, 'w') as meta:
+        meta.write("Lang\tFile\n")
+        df = pd.read_csv(args.input_file, sep=chr(255)*3, encoding="utf8", quoting=csv.QUOTE_NONE, names=['path', 'lang', 'snippet'])
+        for row in df.itertuples():  # assume \n -> \\n done already
+            if SHOULD_STOP:  # handle Ctrl+C
+                break
+            #import pdb; pdb.set_trace()
+            if row.snippet:
+                #write snippet vector
+                snippet = str(row.snippet).replace("\n", "")
+                x = np.array([np.array(snippetToVec(snippet, word_to_index))])
+                x = sequence.pad_sequences(x, maxlen=maxlen)
+                sentence_vector = avg_layer_model.predict(x)
+                doc.write("{}\n".format("\t".join([str(w) for w in sentence_vector[0]])))
+                #write meta
+                meta.write("{}\t{}\n".format(row.lang, row.path.replace("/Users/alex/floss/learning-linguist/dataset-1/repos/","")))
+            else:
+                #print("{}: '{}' empty snippet".format(row.Index, row.path), file=sys.stderr)
+                skipped_empty_snippets += 1
+        print("Empty snippets: {} of {}".format(skipped_empty_snippets, len(df.index)))
+
+
+def _get_avg_layer(model_dir):
+    model_file = _get_model_filename(model_dir)
+    model = keras.models.load_model(model_file)
+    layer_name = 'global_average_pooling1d_1'
+    return Model(inputs=model.input,
+                outputs=model.get_layer(layer_name).output)
+
+def _get_model_filename(model_dir):
     path = os.path.join(model_dir, K_MODEL.format("*"))
     files = glob(path)
     if files and len(files) > 0:
@@ -199,14 +226,13 @@ def get_model_filename(model_dir):
         print("No model files found: '{}'".format(path))
         return ""
 
-
 def load_data_all(train, test):
     print('Loading data...')
-    tr = load_data_for("train", train)
-    ts = load_data_for("test", train)
+    tr = _load_data_for("train", train)
+    ts = _load_data_for("test", train)
     return (tr, ts)
 
-def load_data_for(purpose, src_file):
+def _load_data_for(purpose, src_file):
     (x, y) = load_data(src_file)
     print('{} {} snippets'.format(len(x), purpose))
     print('Average {} snippet length: {}'.format(purpose, np.mean(list(map(len, x)), dtype=int)))
@@ -214,10 +240,10 @@ def load_data_for(purpose, src_file):
 
 
 SHOULD_STOP = False  # Handle Ctrl+C gracefully
-def sigint_handler(signal, frame):
+def _sigint_handler(signal, frame):
     global SHOULD_STOP
     SHOULD_STOP = True
-signal.signal(signal.SIGINT, sigint_handler)
+signal.signal(signal.SIGINT, _sigint_handler)
 
 if __name__ == "__main__":
     main()
