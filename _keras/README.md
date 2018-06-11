@@ -12,10 +12,21 @@ pv snippets_enry_train.csv | ./vectorize.py -l labels.txt -d dict.txt > snippets
 
 pv snippets_enry_test.csv | ./vectorize.py -l labels.txt -d dict.txt > snippets_enry_test_vec.csv
 
+# Train
 ./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt train 1
+
+# Evaluate
+./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt -m model-full test 1
+
+# Predict
+./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt -m model-full predict -
+
+# Print full snippet vectors/embeddings (analog of "fasttext print-sentence-vectors)
+./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt -m model-full print-snippet-vectors -
+
 ```
 
-science-3 flow
+science-3 flow:
 ```
 docker run -it -e LD_PRELOAD= -v /storage:/storage --name alex --privileged srcd/science bash
 docker exec -it alex bash
@@ -23,10 +34,6 @@ docker exec -it alex bash
 scp model_dnn_fixed.py science-3:/storage/alex/langid
 python3 ./model_dnn_fixed.py -m ./model-full train 1
 scp science-3:/storage/alex/langid/model-full/bow_embeddings_keras/keras-model-1528711009.8389738 model-full/bow_embeddings_keras
-
-./model_dnn_fixed.py -d ../_tf-estimator/dict.txt -l ../_tf-estimator/labels.txt -m model-full test 1
-
-
 ```
 
 
@@ -59,6 +66,8 @@ Comparison
    https://medium.com/@akionakas/precision-recall-curve-with-keras-cd92647685e1
  * Learning curves
    https://stackoverflow.com/questions/47877475/keras-tensorboard-plot-train-and-validation-scalars-in-a-same-figure
+ * visualize document embeddings: print-sentence-vectors
+   https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer
 
 Error analysis
  * confusion matrix
@@ -68,7 +77,7 @@ Training
  * algorithms
  * LSTM
 
-# Applicatoin
+## Applicatoin
  * Golang inference
    https://github.com/vmarkovtsev/BiDiSentiment/blob/master/inference.go
    https://github.com/src-d/tensorflow-codelab/tree/master/cmd

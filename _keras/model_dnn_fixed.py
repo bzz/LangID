@@ -14,7 +14,7 @@ from glob import glob
 import numpy as np
 import pandas as pd
 import keras
-from keras.models import Sequential
+from keras.models import Model, Sequential
 from keras.layers import Dense, Embedding, GlobalAveragePooling1D
 from keras.preprocessing import sequence
 from keras.callbacks import TensorBoard
@@ -46,7 +46,7 @@ def load_data(filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict"))
+    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict", "print-sentence-vectors"))
     parser.add_argument("input_file", help="Training data in CSV format")
     parser.add_argument("-d", "--dict", type=str, default="dict.txt", help="file to read a dictionary from")
     parser.add_argument("-l", "--labels-dict", type=str, default="labels.txt", help="load labels dictionary from")
@@ -65,6 +65,8 @@ def main():
         test(model_dir, len(label_to_index))
     elif args.mode == "predict":
         predict(model_dir, word_to_index, label_to_index, args)
+    elif args.mode == "print-snippet-vectors":
+        print_snippet_vectors(model_dir, word_to_index, args)
 
 def train(model_dir, word_to_index, label_to_index):
     ((x_train, y_train), (x_test, y_test)) = load_data_all(
@@ -144,9 +146,9 @@ def predict(model_dir, word_to_index, label_to_index, args):
     model_file = get_model_filename(model_dir)
     model = keras.models.load_model(model_file)
 
-    input = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
+    input_ = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
     labels = {v: k for k, v in label_to_index.items()}
-    for line in input:  # assume \n -> \\n in the CLI input
+    for line in input_:  # assume \n -> \\n in the CLI input
         if SHOULD_STOP:  # handle Ctrl+C
             break
         line = line.replace("\n", "")
@@ -161,7 +163,29 @@ def predict(model_dir, word_to_index, label_to_index, args):
                 for i in top_n_probs[np.argsort(prediction[top_n_probs])[::-1]]:
                     print("\t {}, {:.2f}".format(labels[i], float(prediction[i])))
 
-    input.close()
+    input_.close()
+
+def print_snippet_vectors(model_dir, word_to_index, args):
+    model_file = get_model_filename(model_dir)
+    model = keras.models.load_model(model_file)
+
+    layer_name = 'global_average_pooling1d_1'
+    avg_layer_model = Model(inputs=model.input,
+                                    outputs=model.get_layer(layer_name).output)
+
+    input_ = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
+    for line in input_:  # assume \n -> \\n in the CLI input
+        if SHOULD_STOP:  # handle Ctrl+C
+            break
+        line = line.replace("\n", "")
+        if line:
+            x = np.array([np.array(snippetToVec(line, word_to_index))])
+            print("\t'{}' -> {}".format(line, x))
+            x = sequence.pad_sequences(x, maxlen=maxlen)
+            sentence_vector = avg_layer_model.predict(x)
+            print(".".join([str(w) for w in sentence_vector[0]]))
+
+    input_.close()
 
 
 def get_model_filename(model_dir):
