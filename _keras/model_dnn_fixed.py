@@ -11,6 +11,7 @@ import signal
 from time import time
 from glob import glob
 
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 import keras
@@ -46,7 +47,7 @@ def load_data(filename):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict", "print-sentence-vectors", "visualize-snippet-vectors"))
+    parser.add_argument("mode", help="Mode: ", choices=("train", "test", "predict", "print-sentence-vectors", "visualize-snippet-vectors", "export"))
     parser.add_argument("input_file", help="Training data in CSV format")
     parser.add_argument("-d", "--dict", type=str, default="dict.txt", help="file to read a dictionary from")
     parser.add_argument("-l", "--labels-dict", type=str, default="labels.txt", help="load labels dictionary from")
@@ -71,6 +72,8 @@ def main():
         print_snippet_vectors(model_dir, word_to_index, args)
     elif args.mode == "visualize-snippet-vectors":
         visualize_snippet_vectors(model_dir, word_to_index, args)
+    elif args.mode == "export":
+        export_save_model(model_dir, args.input_file)
 
 def train(model_dir, max_words, num_classes):
     ((x_train, y_train), (x_test, y_test)) = load_data_all(
@@ -181,6 +184,46 @@ def print_snippet_vectors(model_dir, word_to_index, args):
             print(".".join([str(w) for w in sentence_vector[0]]))
 
     input_.close()
+
+
+def export_save_model(model_dir, output_dir):
+    model_file = _get_model_filename(model_dir)
+    print("Export model from '{}' to '{}' in SaveModel format".format(model_file, output_dir))
+
+    sess = tf.Session()
+    from keras import backend as K
+    K.set_session(sess)
+    K.set_learning_phase(0)  # all new operations will be in test mode from now on
+
+    # serialize the model and get its weights, for quick re-building
+    previous_model = keras.models.load_model(model_file)
+    config = previous_model.get_config()
+    weights = previous_model.get_weights()
+
+    # re-build a model where the learning phase is now hard-coded to 0
+    #from keras.models import model_from_config
+    #model_from_config(config)
+    new_model = Sequential.from_config(config)
+    new_model.set_weights(weights)
+
+    # TF part
+    builder = tf.saved_model.builder.SavedModelBuilder(output_dir)
+    legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
+
+    from tensorflow.python.saved_model import tag_constants, signature_constants, signature_def_utils_impl
+    prediction_signature = tf.saved_model.signature_def_utils.predict_signature_def(
+        { "code" : new_model.input }, {"prediction" : new_model.output}
+    )
+
+    builder.add_meta_graph_and_variables(
+      sess, [tag_constants.SERVING],
+      signature_def_map={
+           signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+               prediction_signature,
+      },
+      legacy_init_op=legacy_init_op)
+
+    builder.save()
 
 
 def visualize_snippet_vectors(model_dir, word_to_index, args):

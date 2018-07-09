@@ -30,9 +30,28 @@ pv snippets_enry_test.csv | ./vectorize.py -l labels.txt -d dict.txt > snippets_
    --doc snippets_enry_test_doc.csv \
    visualize-snippet-vectors \
    ../_tf-estimator/snippets_enry_test.csv
+
+# Export trained mode in SaveModel format
+./model_dnn_fixed.py -m model-full -d ../_tf-estimator/dict.txt export ./saved_model_dir
+saved_model_cli show  --dir saved_model_dir --tag_set serve --signature_def serving_default
+
+#
+bazel-bin/tensorflow/python/tools/freeze_graph \
+
+
+# Inference from Golang
+// https://www.tensorflow.org/versions/r1.9/install/install_go
+curl -o "libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz" \
+   "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz"
+tar -xvzf "libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz"
+
+go run main.go
+
+
+
 ```
 
-science-3 flow:
+## science-3
 ```
 docker run -it -e LD_PRELOAD= -v /storage:/storage --name alex --privileged srcd/science bash
 docker exec -it alex bash
