@@ -81,13 +81,19 @@ rm ../dataset-1/annotated_files_enry_filtered.csv snippets_enry_train.csv snippe
 
 ## Training/Evaluation in TF
 
+### Linear Classifier
 ```
-train.py -d dict.txt -l labels.txt -o model.??? snippets_train.tfrecords
-eval.py  -d dict.txt -m model.??? -o ./metrics_test snippets_test.tfrecords
-tensorboard --logdir=./metrics_test
+./model_linear.py train -d dict.txt -l labels.txt -m model-linear snippets_train.tfrecords
+./model_linear.py test  -d dict.txt -m model-linear snippets_test.tfrecords
+tensorboard --logdir=./model-linear/bow_sparse
 
-predict.py -d dict.txt -m model.???
+./model_linear.py predict < "println("hello world");"
 ```
+### Deep NN
+```
+./model_dnn.py train -d dict.txt -l labels.txt -m model-dnn snippets_enry_train.tfrecords
+```
+
 ## Error analysis
 
 ### Known issues

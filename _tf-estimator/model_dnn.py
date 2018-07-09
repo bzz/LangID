@@ -7,7 +7,7 @@ import signal
 import tensorflow as tf
 import numpy as np
 
-from vectorize import read_dict, snippetToVec
+from vectorize import read_dict
 from model_linear import train, test, predict, sigint_handler
 """
 Given dictionaris in

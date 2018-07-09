@@ -38,7 +38,7 @@ def main():
         feature_columns=[column], model_dir=os.path.join(args.model_dir, 'bow_sparse'), n_classes=len(label_to_index))
 
     if args.mode == "train":
-        train(args, classifier)
+        train(args, classifier, train_input_fn)
     elif args.mode == "test":
         test(args, classifier)
     elif args.mode == "predict":
@@ -68,7 +68,7 @@ def input_fn(filename):
 
     def deflate(x, y):
         x['len'] = tf.squeeze(x['len'])
-        y = tf.squeeze(y)
+        #y = tf.squeeze(y) !BUG!
         return x, y
         
     dataset = tf.data.TFRecordDataset(filename)
@@ -78,7 +78,14 @@ def input_fn(filename):
     dataset = dataset.map(deflate)
     return dataset
 
-def train(args, classifier):
+def train_input_fn(filename):
+    dataset = input_fn(filename)
+    dataset = dataset.shuffle(buffer_size=154000)
+    dataset.repeat()
+    return dataset.make_one_shot_iterator().get_next()
+
+
+def train(args, classifier, train_input_fn=train_input_fn):
     if not args.model_dir:
         args.model_dir = tempfile.mkdtemp()
         print("Model will be saved to {}".format(args.model_dir))
@@ -88,12 +95,6 @@ def train(args, classifier):
             os.makedirs(args.model_dir)
 
     train_data = args.input_file
-
-    def train_input_fn(filename):
-        dataset = input_fn(filename)
-        dataset = dataset.shuffle(buffer_size=154000)
-        dataset.repeat()
-        return dataset.make_one_shot_iterator().get_next()
 
     print("\n## Training")
     # Training for 4000 steps means 128*4000 training examples (with the default batch size)
@@ -124,7 +125,7 @@ def test(args, classifier):
 def predict(args, classifier, word_to_index, label_to_index):
     input = sys.stdin if args.input_file == "-" else open(ags.input_file, "r")
     labels = {v: k for k, v in label_to_index.items()}
-    for line in sys.stdin:  # assume \n -> \\n in the CLI input
+    for line in input:  # assume \n -> \\n in the CLI input
         if SHOULD_STOP:  # handle Ctrl+C
             break
         line = line.replace("\n", "")
