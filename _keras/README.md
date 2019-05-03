@@ -3,7 +3,7 @@ This is implementation of simple DNN classifier model in Keras API.
 Limitations:
  - no dynamic batch sizes: all vectorisze code snippets have same length
  - by default, uses .csv->np.array and not .tfrecords->Tensor as input 
-   allows to benefit from Keras simulanios training/evalution but is slower
+   allows to benefit from Keras simultanios training/evalution but is slower
 
 ## Using .csv
 
@@ -33,6 +33,7 @@ pv snippets_enry_test.csv | ./vectorize.py -l labels.txt -d dict.txt > snippets_
 
 # Export trained mode in SaveModel format
 ./model_dnn_fixed.py -m model-full -d ../_tf-estimator/dict.txt export ./saved_model_dir
+
 saved_model_cli show  --dir saved_model_dir --tag_set serve --signature_def serving_default
 
 #
@@ -43,11 +44,51 @@ bazel-bin/tensorflow/python/tools/freeze_graph \
 // https://www.tensorflow.org/versions/r1.9/install/install_go
 curl -o "libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz" \
    "https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz"
-tar -xvzf "libtensorflow-cpu-$(go env GOOS)-x86_64-1.9.0-rc2.tar.gz"
+tar -xvzf "libtensorflow-cpu-$(go env GOOS)-x86_64-1.export
 
-go run main.go
+export LIBRARY_PATH="$LIBRARY_PATH:$(pwd)/lib"
+export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$(pwd)/lib"
+
+go get github.com/tensorflow/tensorflow/tensorflow/go
+go test github.com/tensorflow/tensorflow/tensorflow/go
+
+echo "import numpy as np" | go run main.go ./saved_model_dir ./../_tf-estimator/dict.txt
 
 
+# Inference \w TF.Serving and REST
+https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/setup.md#installing-from-source
+
+tensorflow_model_server --port=9000 --rest_api_port=9001 --model_name=langid --model_base_path=./saved_model_dir
+
+curl -X POST \
+  http://localhost:9001/v1/models/langid:predict \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -d '{
+  "signature_name": "serving_default",
+  "instances": [
+     { "b64": "$(echo "import numpy as np" | base64)" }
+   ]
+}'
+
+# Inference from JavaScript
+// https://github.com/tensorflow/tfjs-converter
+
+# pip install --upgrade tensorflowjs #fix keras version :/
+pip install "git+git://github.com/tensorflow/tfjs-converter#egg=tensorflowjs_dev&subdirectory=python"
+
+tensorflowjs_converter \
+    --input_format=tf_saved_model \
+    --output_node_names='dense_1_1/Softmax' \
+    --saved_model_tags=serve \
+    ./saved_model_dir \
+    ./saved_model_web_dir
+
+
+
+"A deep tree-based model for software defect prediction" by Dam, Hoa Khanh, et al https://arxiv.org/abs/1802.00921 
+
+Research supported by @Samsung that adapts Tree-LSTM to use AST of source code, builds ast2vec node embeddings & trained on static analysis tool results of @TizenProject
 
 ```
 
@@ -79,7 +120,7 @@ Keras can do evaluaiton while training, but not in this case of Tensor input.
 ## Model
  * [x] save model for re-use (hp5 format)
  * [ ] extract `common.py` \w vocab reading, to simplify imports
- * [ ] export model 1: SaveModel
+ * [x] export model 1: SaveModel
        https://blog.keras.io/keras-as-a-simplified-interface-to-tensorflow-tutorial.html#exporting-a-model-with-tensorflow-serving
 
  * [ ] export model 2: GraphDef + weights
@@ -103,14 +144,14 @@ Training
  * LSTM
 
 ## Applicatoin
- * Golang inference
+ * [x] Golang inference
    https://github.com/vmarkovtsev/BiDiSentiment/blob/master/inference.go
    https://github.com/src-d/tensorflow-codelab/tree/master/cmd
    https://github.com/google-aai/tf-serving-k8s-tutorial/blob/master/keras_training_to_serving.ipynb
    http://vmarkovtsev.github.io/codelab-2018-aalborg
 
- * Web: js inference on frontend
+ * [ ] Web: js inference on frontend
    https://github.com/tensorflow/tfjs-converter
 
- * Web: tf.Serving for backend
+ * [x] Web: tf.Serving for backend
    https://github.com/tensorflow/serving/blob/master/tensorflow_serving/g3doc/serving_basic.md
